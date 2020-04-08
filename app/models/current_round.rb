@@ -1,0 +1,2 @@
+class CurrentRound < ApplicationRecord
+end

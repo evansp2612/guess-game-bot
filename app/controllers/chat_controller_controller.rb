@@ -28,41 +28,51 @@ class ChatControllerController < ApplicationController
 
     #contoh penggunaan api post-comment untuk jenis button
     def replyCommandButton(text, buttons)
-        payload = {
-            'text' => text,
-            'buttons' => []
-        }
-        buttons.each do |b|
-            payload["buttons"].push(
-                {
-                    'label' => b,
-                        'type' => 'postback',
-                        'payload' => {
-                            'url' => '#',
-                            'method' => 'get',
-                            'payload' => 'null'
-                        }
-                }
-            )
+        begin
+            retries ||= 0
+            payload = {
+                'text' => text,
+                'buttons' => []
+            }
+            buttons.each do |b|
+                payload["buttons"].push(
+                    {
+                        'label' => b,
+                            'type' => 'postback',
+                            'payload' => {
+                                'url' => '#',
+                                'method' => 'get',
+                                'payload' => 'null'
+                            }
+                    }
+                )
+            end
+            replay = {
+                'access_token' => self.access_token,
+                'topic_id' => self.room_id,
+                'type' => 'buttons',
+                'payload' => payload.to_json
+            }
+            post_comment = Unirest.post(self.apiurl+'post_comment', headers: self.headers, parameters: replay)
+        rescue
+            retry if (retries += 1) < 3
         end
-        replay = { 
-            'access_token' => self.access_token,
-            'topic_id' => self.room_id,
-            'type' => 'buttons',
-            'payload' => payload.to_json
-        }
-        post_comment = Unirest.post(self.apiurl+'post_comment', headers: self.headers, parameters: replay)
     end
     
     #contoh penggunaan api post-comment untuk jenis text
     def replyCommandText(text)
-        replay = {
-            'access_token' => self.access_token,
-            'topic_id' => self.room_id,
-            'type' => 'text',
-            'comment' => text
-        }
-        post_comment = Unirest.post(self.apiurl+'post_comment', headers: self.headers, parameters: replay)
+        begin
+            retries ||= 0
+            replay = {
+                'access_token' => self.access_token,
+                'topic_id' => self.room_id,
+                'type' => 'text',
+                'comment' => text
+            }
+            post_comment = Unirest.post(self.apiurl+'post_comment', headers: self.headers, parameters: replay)
+        rescue
+            retry if (retries += 1) < 3
+        end
     end
 
     #fungsi untuk jalankan bot

@@ -176,7 +176,7 @@ class ChatControllerController < ApplicationController
         text = "Score\n\n"
         i = 1
         leaderboard.each do |l|
-            text = i.to_s+". "+l[:name]+" - "+l[:point].to_s+"\n"
+            text = text+i.to_s+". "+l[:name]+" - "+l[:point].to_s+"\n"
             i += 1
         end
         if buttons.empty?

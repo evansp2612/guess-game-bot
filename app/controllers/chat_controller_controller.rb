@@ -80,50 +80,50 @@ class ChatControllerController < ApplicationController
         uri.scheme = "https"
         @apiurl = uri.to_s+'/api/v1/chat/conversations/'
 
-        if CurrentRound.first.nil?
+        if CurrentRound.where(room: self.room_id).first.nil?
             if chat.message == '/mulai'
                 self.replyCommandText("Please wait....")
                 q = QuestionList.where(enabled: true).order(Arel.sql('RANDOM()')).first
                 q.answer.each do |a|
-                    CurrentRound.create(question: q[:question], answer: a)
+                    CurrentRound.create(question: q[:question], answer: a, room: self.room_id)
                 end
                 send_question
             end
         else
             if chat.message == "/leaderboard"
-                if Leaderboard.first.nil?
+                if Leaderboard.where(room: self.room_id).first.nil?
                     self.replyCommandText("Jawab yang bener dulu")
                 else
                     send_leaderboard([])
                 end
             elsif chat.message == "/next"
-                if CurrentRound.where(name: nil).first
+                if CurrentRound.where(name: nil, room: self.room_id).first
                     self.replyCommandText("Jawab semuanya dulu")
                 else
                     self.replyCommandText("Please wait....")
-                    question = CurrentRound.first.question
-                    CurrentRound.delete_all
+                    question = CurrentRound.where(room: self.room_id).first.question
+                    CurrentRound.where(room: self.room_id).delete_all
                     q = QuestionList.where(enabled: true).where.not(question: question).order(Arel.sql('RANDOM()')).first
                     q.answer.each do |a|
-                        CurrentRound.create(question: q[:question], answer: a)
+                        CurrentRound.create(question: q[:question], answer: a, room: self.room_id)
                     end
                     send_question
                 end
             elsif chat.message == "/stop"
                 send_leaderboard(["/mulai"])
-                CurrentRound.delete_all
-                Leaderboard.delete_all
+                CurrentRound.where(room: self.room_id).delete_all
+                Leaderboard.where(room: self.room_id).delete_all
             else
-                answer = CurrentRound.where(name: nil).where("lower(answer) = ?", chat.message.downcase).first
+                answer = CurrentRound.where(name: nil, room: self.room_id).where("lower(answer) = ?", chat.message.downcase).first
                 if answer
                     answer.update(name: chat.sender)
-                    leaderboard = Leaderboard.where(user_id: self.apiResponse['from']['id']).first
+                    leaderboard = Leaderboard.where(user_id: self.apiResponse['from']['id'], room: self.room_id).first
                     unless leaderboard
-                        leaderboard = Leaderboard.create(user_id: self.apiResponse['from']['id'], name: chat.sender)
+                        leaderboard = Leaderboard.create(user_id: self.apiResponse['from']['id'], name: chat.sender, room: self.room_id)
                     end
                     leaderboard.increment!(:point)
                     send_question
-                    unless CurrentRound.where(name: nil).first
+                    unless CurrentRound.where(name: nil, room: self.room_id).first
                         send_leaderboard(["/next", "/stop"])
                     end
                 end
@@ -172,7 +172,7 @@ class ChatControllerController < ApplicationController
     end
 
     private def send_leaderboard(buttons)
-        leaderboard = Leaderboard.all.order(point: :desc)
+        leaderboard = Leaderboard.where(room: self.room_id).order(point: :desc)
         text = "Score\n\n"
         i = 1
         leaderboard.each do |l|

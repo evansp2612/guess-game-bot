@@ -1,0 +1,40 @@
+<%= form_with(model: question_list, local: true) do |form| %>
+  <% if question_list.errors.any? %>
+    <div id="error_explanation">
+      <h2><%= pluralize(question_list.errors.count, "error") %> prohibited this question from being submitted:</h2>
+
+      <ul>
+      <% question_list.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= form.label :question %>
+    <%= form.text_field :question, :required => true %>
+  </div>
+<br>
+    <%= form.label :answers, "Answers (minimum 1)" %>
+  <%
+    i = 1
+    10.times do
+  %>
+  <div class="field" style="margin-top: 5px" >
+    <%= i.to_s+". "%>
+    <%= form.text_field :answer, name: "question_list[answer][]"%>
+    <% i += 1 %>
+  </div>
+  <% end %>
+
+<!--  <div class="field">-->
+    <%#= form.label :enabled %>
+    <%#= form.text_field :enabled %>
+<!--  </div>-->
+
+  <br>
+  <div class="actions">
+    <%= form.submit "Submit" %>
+  </div>
+<% end %>

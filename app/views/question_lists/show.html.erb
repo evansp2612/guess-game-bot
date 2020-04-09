@@ -1,0 +1,19 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>Question:</strong>
+  <%= @question_list.question %>
+</p>
+
+<p>
+  <strong>Answer:</strong>
+  <%= @question_list.answer %>
+</p>
+
+<p>
+  <strong>Enabled:</strong>
+  <%= @question_list.enabled %>
+</p>
+
+<%= link_to 'Edit', edit_question_list_path(@question_list) %> |
+<%= link_to 'Back', question_lists_path %>

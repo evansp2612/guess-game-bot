@@ -90,14 +90,18 @@ class ChatControllerController < ApplicationController
         uri.scheme = "https"
         @apiurl = uri.to_s+'/api/v1/chat/conversations/'
 
-        if CurrentRound.where(room: self.room_id).first.nil?
+        current_round = CurrentRound.where(room: self.room_id)
+        if current_round.first.nil?
             if chat.message == '/mulai'
                 self.replyCommandText("Please wait....")
-                q = QuestionList.where(enabled: true).order(Arel.sql('RANDOM()')).first
+                q = QuestionList.where(enabled: true).order('RANDOM()').first
                 q.answer.each do |a|
-                    CurrentRound.create(question: q[:question], answer: a, room: self.room_id)
+                    CurrentRound.create(question: q[:question], answer: a, room: self.room_id, round: 1)
                 end
+                self.replyCommandText("Round 1")
                 send_question
+            elsif chat.message.include? "@[#{self.apiResponse['my_account']['qiscus_email']}]"
+                self.replyCommandButton("Mau main?", ["/mulai"])
             end
         else
             if chat.message == "/leaderboard"
@@ -107,34 +111,84 @@ class ChatControllerController < ApplicationController
                     send_leaderboard([])
                 end
             elsif chat.message == "/next"
-                if CurrentRound.where(name: nil, room: self.room_id).first
+                if current_round.where(name: nil).first
                     self.replyCommandText("Jawab semuanya dulu")
+                    self.replyCommandButton("Atau mau pass aja? Minimal 3 orang untuk lanjut", ["/pass", "/stop"])
                 else
                     self.replyCommandText("Please wait....")
-                    question = CurrentRound.where(room: self.room_id).first.question
-                    CurrentRound.where(room: self.room_id).delete_all
-                    q = QuestionList.where(enabled: true).where.not(question: question).order(Arel.sql('RANDOM()')).first
-                    q.answer.each do |a|
-                        CurrentRound.create(question: q[:question], answer: a, room: self.room_id)
+                    question = current_round.first.asked
+                    round = current_round.first.round
+                    next_round = round+1
+                    current_round.delete_all
+                    q = QuestionList.where(enabled: true).where.not(id: question).order('RANDOM()').first
+                    if q
+                        question.push(q.id)
+                        q.answer.each do |a|
+                            CurrentRound.create(question: q[:question], answer: a, room: self.room_id, asked: question, round: next_round)
+                        end
+                        self.replyCommandText("Round #{next_round}")
+                        send_question
+                    else
+                        self.replyCommandText("Permainan selesai")
+                        send_leaderboard("/mulai")
                     end
-                    send_question
                 end
             elsif chat.message == "/stop"
                 send_leaderboard(["/mulai"])
-                CurrentRound.where(room: self.room_id).delete_all
+                current_round.delete_all
                 Leaderboard.where(room: self.room_id).delete_all
-            else
-                answer = CurrentRound.where(name: nil, room: self.room_id).where("lower(answer) = ?", chat.message.downcase).first
-                if answer
-                    answer.update(name: chat.sender)
-                    leaderboard = Leaderboard.where(user_id: self.apiResponse['from']['id'], room: self.room_id).first
-                    unless leaderboard
-                        leaderboard = Leaderboard.create(user_id: self.apiResponse['from']['id'], name: chat.sender, room: self.room_id)
-                    end
-                    leaderboard.increment!(:point)
+            elsif chat.message.include? "@[#{self.apiResponse['my_account']['qiscus_email']}]"
+                if current_round.where(name: nil).first
                     send_question
-                    unless CurrentRound.where(name: nil, room: self.room_id).first
-                        send_leaderboard(["/next", "/stop"])
+                    self.replyCommandButton("Masih mau jawab atau mau pass aja?", ["/pass"])
+                else
+                    send_leaderboard(["/next", "/stop"])
+                end
+            elsif chat.message == "/pass"
+                pass = current_round.first.pass
+                if pass.include? self.apiResponse['from']['id']
+                    self.replyCommandText("sekali aja @[#{self.apiResponse['from']['qiscus_email']}]")
+                else
+                    pass.push(self.apiResponse['from']['id'])
+                    current_round.update_all(pass: pass)
+                    remain = 3 - pass.length
+                    if remain > 0
+                        self.replyCommandButton("#{chat.sender.split.first} udah nyerah nih & gak bisa jawab lagi ya, perlu #{remain} orang lagi nyerah kalo mau lanjut", ["/pass"])
+                    else
+                        self.replyCommandText("Please wait....")
+                        question = current_round.first.asked
+                        round = current_round.first.round
+                        next_round = round++
+                        current_round.delete_all
+                        q = QuestionList.where(enabled: true).where.not(id: question).order('RANDOM()').first
+                        if q
+                            question.push(q.id)
+                            q.answer.each do |a|
+                                CurrentRound.create(question: q[:question], answer: a, room: self.room_id, asked: question, round: next_round)
+                            end
+                            self.replyCommandText("Round #{next_round}")
+                            send_question
+                        else
+                            self.replyCommandText("Permainan selesai")
+                            send_leaderboard("/mulai")
+                        end
+                    end
+                end
+            else
+                pass = current_round.first.pass
+                unless pass.include? self.apiResponse['from']['id']
+                    answer = current_round.where(name: nil).where("lower(answer) = ?", chat.message.downcase).first
+                    if answer
+                        answer.update(name: chat.sender)
+                        leaderboard = Leaderboard.where(user_id: self.apiResponse['from']['id'], room: self.room_id).first
+                        unless leaderboard
+                            leaderboard = Leaderboard.create(user_id: self.apiResponse['from']['id'], name: chat.sender, room: self.room_id)
+                        end
+                        leaderboard.increment!(:point)
+                        send_question
+                        unless current_round.where(name: nil).first
+                            send_leaderboard(["/next", "/stop"])
+                        end
                     end
                 end
             end

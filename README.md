@@ -1,4 +1,4 @@
-# Kiwari Bot Webhook Sample with Ruby
+# Guess Game bot in ChatAja
 
 ## Requirements
 
@@ -6,22 +6,22 @@
 * [Ruby on Rails](https://rubyonrails.org/)
 * [Bundler](https://bundler.io/bundle_install.html)
 * [ngrok](https://ngrok.com/)
-* Kiwari Access Token (you can chat with Abah Bot in `Discover` menu)
+* [ChatAja!](https://download.chataja.co.id/)
+* ChatAja bot (you can create it with Chatbot Builder in `Jelajah` menu)
 
 ## How to run
 
 * Clone this repository and install dependencies `Gemfile`
 
 ```bash
-$ git clone https://gitlab.playcourt.id/iskandarsuhaimi/webhook-kiwaribot-sample-ruby.git
-$ cd webhook-kiwaribot-sample-ruby
+$ git clone https://github.com/evansp2612/guess-game-bot.git
+$ cd guess-game-bot
 $ bundle install
 ```
 
-* Go to `Discover` menu
-* chat with `Abah Bot`
-* Create bot and get `access_token`
-* Copy and Paste to `chat_controller.rb` class
+* Go to `Jelajah` menu in ChatAja
+* Start chat with `Chatbot Builder`
+* Create bot
 
 * Run webhook server
 
@@ -36,5 +36,5 @@ $ rails server
 $ ngrok http 3000
 ```
 
-* Register your webhook url by copy your ngrok https url from CLI, then input it to `Abah Bot`
+* Register your webhook url with ngrok https url from CLI, then input it to `Chatbot Builder`
 * Enjoy!
